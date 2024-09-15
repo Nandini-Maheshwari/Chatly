@@ -1,12 +1,45 @@
-import React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useSocket } from '../Providers/Socket.jsx';
+import { useNavigate } from 'react-router-dom';
 
 function Home() {
+
+  const { socket } = useSocket();
+  const navigate = useNavigate();
+  const [ email,setEmail ] = useState('');
+  const [ roomId,setRoomId ] = useState('');
+
+  const handleRoomJoined = useCallback(({roomId}) => {
+    navigate(`/room/${roomId}`);
+  }, [ navigate ]);
+
+  useEffect(() => {
+    socket.on('joined-room', handleRoomJoined);
+
+    return () => {
+      socket.off('joined-room', handleRoomJoined);
+    };
+
+  }, [ handleRoomJoined, socket ]);
+
+  const handleJoinRoom = ({}) => {
+    socket.emit('join-room', { emailId: email, roomId});
+  }
+
   return (
     <div className='homepage-container'>
         <div className='input-container'>
-            <input type='email' placeholder='Enter your email here' />
-            <input type='text' placeholder='Enter Room Code' />
-            <button>Enter Room</button>
+            <input value={email}
+              type='email' 
+              placeholder='Enter your email here' 
+              onChange={e => setEmail(e.target.value)}
+            />
+            <input value={roomId} 
+              type='text' 
+              placeholder='Enter Room Code' 
+              onChange={e => setRoomId(e.target.value)}
+            />
+            <button onClick={ handleJoinRoom } >Enter Room</button>
         </div>
     </div>
   )
