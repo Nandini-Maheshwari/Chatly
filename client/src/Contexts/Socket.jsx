@@ -17,3 +17,6 @@ export const SocketProvider = (props) => {
         </SocketContext.Provider>
     )
 }
+
+//The context ensures all react components can access the same socket instance.
+//We need same socket for tasks like sending call invites, accepting/declining calls, and maintaining peer-to-peer communication.

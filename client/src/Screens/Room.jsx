@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import ReactPlayer from 'react-player';
-import { useSocket } from '../Providers/Socket.jsx';
-import { usePeer } from '../Providers/Peer.jsx';
+import { useSocket } from '../Contexts/Socket.jsx';
+import { usePeer } from '../Contexts/Peer.jsx';
 
 function Room() {
 
@@ -15,7 +15,15 @@ function Room() {
         const { emailId } = data;
         console.log(`New user joined room ${emailId}`);
         const offer = await createOffer();
+        console.log('Emitting call-user with offer', offer);
         socket.emit('call-user', { emailId, offer });
+        // if (socket.connected) {
+        //     console.log('Socket is connected');
+        //     socket.emit('call-user', { emailId, offer });
+        //     console.log('call-user event emitted');
+        // } else {
+        //     console.log('Socket is not connected');
+        // }
         setRemoteEmailId(emailId);
     }, [ createOffer, socket ]);
 
@@ -29,7 +37,7 @@ function Room() {
 
     const handleCallAccepted = useCallback(async (data) => {
         const { ans } = data;
-        console.log(`Call got accepted ${ans}`);
+        console.log('Call got accepted', ans);
         await setRemoteAns(ans);
     }, [ setRemoteAns ]);
 
@@ -43,14 +51,21 @@ function Room() {
         setMyStream(stream);
     }, [ sendStream ]);
 
-    const handleNegotiation = useCallback(() => {
-        const localOffer = peer.localDescription;
-        socket.emit('call-user', { emailId: remoteEmailId, offer: localOffer });
-    }, [ peer, remoteEmailId, socket ]);
+    const handleNegotiation = useCallback(async () => {
+        try {
+            if (!peer.localDescription || peer.signalingState === "stable") {
+                const offer = await peer.createOffer();
+                await peer.setLocalDescription(offer);
+                socket.emit('call-user', { emailId: remoteEmailId, offer });
+            }
+        } catch (error) {
+            console.error('Error during renegotiation:', error);
+        }
+    }, [ peer, remoteEmailId, socket ]);    
 
     useEffect(() => {
         socket.on('user-joined', handleNewUserJoined);
-        socket.on('incoming-call, handleIncomingCall');
+        socket.on('incoming-call', handleIncomingCall);
         socket.on('call-accepted', handleCallAccepted);
 
         return () => {
@@ -61,6 +76,8 @@ function Room() {
 
     }, [ handleNewUserJoined, handleIncomingCall, handleCallAccepted, socket ]);
 
+    //After the initial offer/answer exchange, if there are changes in the media streams 
+    //WebRTC will automatically fire the negotiationneeded event.
     useEffect(() => {
         peer.addEventListener('negotiationneeded', handleNegotiation);
         return () => {
@@ -72,15 +89,41 @@ function Room() {
         getUserMediaStream();
     }, [ getUserMediaStream ]);
 
+    useEffect(() => {
+        if (myStream) {
+            sendStream(myStream);
+        }
+    }, [myStream, sendStream]);
+
     return (
         <div className='room-page-container'>
-            <h3>Lobby</h3>
+            <h3>Room</h3>
             <h4>You are connected to {remoteEmailId}</h4>
             <button onClick={e => sendStream(myStream)} >Send My Video</button>
-            <ReactPlayer url={myStream} playing muted />
-            <ReactPlayer url={remoteStream} playing />
+            <video 
+                playsInline 
+                muted 
+                ref={(video) => { 
+                    if (video && myStream) {
+                        video.srcObject = myStream;
+                    }
+                }} 
+                autoPlay 
+                style={{ width: '300px' }} 
+            />
+            <video 
+                playsInline 
+                ref={(video) => { 
+                    if (video && remoteStream) {
+                        video.srcObject = remoteStream;
+                    }
+                }} 
+                autoPlay 
+                style={{ width: '300px' }} 
+            />
         </div>
-    )
+    );
+    
 }
 
 export default Room

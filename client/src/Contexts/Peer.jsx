@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useCallback } from 'react'
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 const PeerContext = React.createContext(null);
 
 export const usePeer = () => React.useContext(PeerContext);
@@ -18,11 +18,11 @@ export function PeerProvider(props) {
                 },
             ],
         }),
-    []
-    );
+    []);
 
     const createOffer = async () => {
         const offer = await peer.createOffer();
+        console.log('Offer created:',offer);
         await peer.setLocalDescription(offer);
         return offer;
     };
@@ -36,20 +36,35 @@ export function PeerProvider(props) {
 
     const setRemoteAns = async (ans) => {
         await peer.setRemoteDescription(ans);
-    };
+    };    
 
     const sendStream = async (stream) => {
-        const tracks = stream.getTracks();
-        for(const track of tracks) {
-            peer.addTrack(track, stream);
-        }
-    };
+        const senders = peer.getSenders();
+        stream.getTracks().forEach(track => {
+            const sender = senders.find(s => s.track && s.track.kind === track.kind);
+            if (sender) {
+                sender.replaceTrack(track); // Replace existing track if present
+            } else {
+                peer.addTrack(track, stream); // Add new track
+            }
+        });
+    };    
+    
+    // const handleTrackEvent = useCallback((ev) => {
+    //     const streams = ev.streams;
+    //     console.log('Recieved remote stream:', streams[0]);
+    //     setRemoteStream(streams[0]);
+    // }, []);
 
     const handleTrackEvent = useCallback((ev) => {
-        const streams = ev.streams;
-        setRemoteStream(streams[0]);
-    }, []);
-
+        const stream = ev.streams[0];
+        if (remoteStream && remoteStream.id === stream.id) {
+            console.log('Stream already added:', stream.id);
+            return;
+        }
+        console.log('Received remote stream:', stream);
+        setRemoteStream(stream);
+    }, [remoteStream]);    
 
     useEffect(() => {
         peer.addEventListener('track', handleTrackEvent);

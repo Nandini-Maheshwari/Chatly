@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useSocket } from '../Providers/Socket.jsx';
+import { useSocket } from '../Contexts/Socket.jsx';
 import { useNavigate } from 'react-router-dom';
 
 function Home() {
@@ -23,12 +23,13 @@ function Home() {
   }, [ handleRoomJoined, socket ]);
 
   const handleJoinRoom = ({}) => {
-    socket.emit('join-room', { emailId: email, roomId});
+    socket.emit('join-room', { emailId: email, roomId});  
   }
 
   return (
     <div className='homepage-container'>
         <div className='input-container'>
+            <h3>Lobby</h3>
             <input value={email}
               type='email' 
               placeholder='Enter your email here' 
@@ -39,7 +40,7 @@ function Home() {
               placeholder='Enter Room Code' 
               onChange={e => setRoomId(e.target.value)}
             />
-            <button onClick={ handleJoinRoom } >Enter Room</button>
+            <button onClick={ handleJoinRoom }>Enter Room</button>
         </div>
     </div>
   )

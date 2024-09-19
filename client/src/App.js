@@ -1,10 +1,10 @@
 import { Routes, Route } from 'react-router-dom';
-import Home from './Pages/Home.jsx';
-import Room from './Pages/Room.jsx';
+import Home from './Screens/Home.jsx';
+import Room from './Screens/Room.jsx';
 import './App.css';
 
-import { SocketProvider } from './Providers/Socket.jsx';
-import { PeerProvider } from './Providers/Peer.jsx';
+import { SocketProvider } from './Contexts/Socket.jsx';
+import { PeerProvider } from './Contexts/Peer.jsx';
 
 function App() {
   return (
